@@ -6,7 +6,7 @@ import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-public class a {
+public class BankServerWithFile {
     // File paths for persistence
     private static final String ACCOUNTS_FILE = "accounts.dat";
     private static final String TRANSACTIONS_FILE = "transactions.dat";
