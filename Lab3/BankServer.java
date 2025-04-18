@@ -35,6 +35,7 @@ public class BankServer {
                 System.out.println("Error accepting connection: " + e.getMessage());
             }
         }
+        //ss.close();
     }
     
     static class ATMSessionHandler extends Thread {
@@ -65,6 +66,7 @@ public class BankServer {
                         String[] parts = message.split(":TX_ID:");
                         command = parts[0];
                         txId = parts[1];
+                        System.out.println("found in cache!!");
                         
                         // Check if this is a retry of a completed transaction
                         if (transactionLog.containsKey(txId)) {
