@@ -20,12 +20,13 @@ public class a {
     private static final Object transactionsFileLock = new Object();
     
     public static void main(String[] args) throws IOException {
+        ServerSocket ss = null;
         try {
             // Initialize and load data
             initializeData();
             
             int port = 5001;
-            ServerSocket ss = new ServerSocket(port);
+            ss = new ServerSocket(port);
             System.out.println("Bank Server started on port: " + ss.getLocalPort());
             System.out.println("Waiting for ATM connections...\n");
 
@@ -57,6 +58,16 @@ public class a {
         } catch (Exception e) {
             System.err.println("Initialization error: " + e.getMessage());
             e.printStackTrace();
+        }
+        finally {
+            if (ss != null && !ss.isClosed()) {
+                try {
+                    ss.close();
+                    System.out.println("Server socket closed");
+                } catch (IOException e) {
+                    System.err.println("Error closing server socket: " + e.getMessage());
+                }
+            }
         }
     }
     
