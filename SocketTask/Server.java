@@ -61,38 +61,60 @@ class ClientHandler extends Thread {
         this.dos = o;
     }
 
+  
     public void run() {
-        String clientString;
-        String serverString = "Hello from server and client port is " + clientSocket.getPort();
+        //String serverString = "Hello from server and client port is " + clientSocket.getPort();
 
-        try {
-            while (true) {
-                clientString = dis.readUTF();
-
-                if (clientString.equalsIgnoreCase("exit")) {
-                    System.out.println("Client [" + clientSocket.getPort() + "] disconnected.");
-                    break;
-                }
-
-                System.out.println("Client says at port number : " + clientSocket.getPort() + " " + clientString);
-
-                
-
-                // response of server
-                dos.writeUTF(serverString);
-
-            }
-        } catch (Exception e) {
-            System.out.println(e);
-        } finally {
+        // Thread for reading from client
+        Thread readThread = new Thread(() -> {
             try {
-                dis.close();
-                dos.close();
-                clientSocket.close();
+                String str;
+                while (true) {
+                    str = dis.readUTF();
+                    System.out.println("Client Says:(port number : " + clientSocket.getPort() + ") :" + str);
+    
+                    if (str.equalsIgnoreCase("STOP")) {
+                        System.out.println("Client has disconnected.");
+                        break;
+                    }
+    
+                   
+                }
             } catch (IOException e) {
-                System.out.println("Error closing resources: " + e.getMessage());
+                System.out.println("Connection closed or error occurred.");
             }
+        });
+    
+        // Thread for server to send messages
+        Thread writeThread = new Thread(() -> {
+            BufferedReader read = new BufferedReader(new InputStreamReader(System.in));
+
+            try {
+                while (true) {
+                    String serverMsg = read.readLine();
+                    // if ( serverMsg.equalsIgnoreCase("STOP")) {
+                    //     dos.writeUTF("STOP");
+                    //     break;
+                    // }
+                    dos.writeUTF(serverMsg);
+                }
+            } catch (IOException e) {
+                System.out.println("Error sending message from server.");
+            }
+        });
+    
+        // Start both threads
+        readThread.start();
+        writeThread.start();
+    
+        try {
+            readThread.join();
+            writeThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
+
 
     }
 }
+
