@@ -1,118 +1,183 @@
-/* Server Side Code */
-
 import java.io.*;
 import java.net.*;
 import java.util.*;
 
 public class Server {
+    private static final int PORT = 5000;
+    public static ArrayList<ClientHandler> clients = new ArrayList<>();
+    private static ServerSocket serverSocket;
+    private static int clientIdCounter = 1; 
 
-    static ServerSocket ss = null;
-
-    public static ArrayList<ClientHandler> allClients = new ArrayList<>();
-
-    public static void main(String[] args) throws IOException {
-
+    public static void main(String[] args) {
         try {
+            serverSocket = new ServerSocket(PORT);
+            System.out.println("Server started on port " + PORT);
 
-            int port = 5001;
-            ss = new ServerSocket(port);
-            System.out.println("Server started on port: " + ss.getLocalPort());
-            System.out.println("Waiting for client connections...\n");
+            PrintWriter out;
+            BufferedReader in;
+
+            
+
+            WorkOfServer workOfServer = new WorkOfServer(serverSocket);
+            workOfServer.start();
 
             while (true) {
-
                 try {
-                    Socket socket = ss.accept();
-                    System.out.println("client connected from port: " + socket.getPort());
+                    Socket clientSocket = serverSocket.accept();
+                    System.out.println("New client connected: " + clientSocket + " (Client " + clientIdCounter + ")");
 
-                    DataInputStream input = new DataInputStream(socket.getInputStream());
-                    DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                    out = new PrintWriter(clientSocket.getOutputStream(), true);
+                    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-                    ClientHandler ch = new ClientHandler(socket, input, output);
-                    allClients.add(ch);
-                    ch.start();
-
-                } catch (IOException e) {
-                    System.out.println("Error accepting connection: " + e.getMessage());
+                    ClientHandler clientHandler = new ClientHandler(clientSocket, clientIdCounter++, in, out);
+                    synchronized (clients) {
+                        clients.add(clientHandler);
+                    }
+                    clientHandler.start();
+                } catch (SocketException e) {
+                    
+                    break;
                 }
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            if (ss != null && !ss.isClosed()) {
-                try {
-                    ss.close();
-                    System.out.println("Server socket closed");
-                } catch (IOException e) {
-                    System.err.println("Error closing server socket: " + e.getMessage());
+            try {
+                if (serverSocket != null && !serverSocket.isClosed()) {
+                    serverSocket.close();
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    public static synchronized void removeClients(ClientHandler ch) {
-        allClients.remove(ch);
-        System.out.println("Total Active clients : " + allClients.size());
+    public static void sendMessageToClient(int clientId, String message) {
+        synchronized (clients) {
+            for (ClientHandler client : clients) {
+                if (client.getClientId() == clientId) {
+                    client.sendMessage(message);
+                    System.out.println("Sent to Client " + clientId + ": " + message);
+                    return;
+                }
+            }
+            System.out.println("Client " + clientId + " not found.");
+        }
     }
 
+    public static synchronized void removeClient(ClientHandler client) {
+        clients.remove(client);
+        System.out.println("Client " + client.getClientId() + " disconnected. Active clients: " + clients.size());
+    }
 }
 
 class ClientHandler extends Thread {
+    private Socket socket;
+    private PrintWriter out;
+    private BufferedReader in;
+    private final int clientId; 
+    private static final String END_OF_MESSAGE = "<EOM>";
 
-    private Socket clientSocket;
-    private DataInputStream dis;
-    private DataOutputStream dos;
-    boolean isRun = false;
-
-    ClientHandler(Socket cs, DataInputStream i, DataOutputStream o) {
-        this.clientSocket = cs;
-        this.dis = i;
-        this.dos = o;
+    public ClientHandler(Socket socket, int clientId, BufferedReader in, PrintWriter out) {
+        this.socket = socket;
+        this.clientId = clientId;
+        this.in = in;
+        this.out = out;
     }
 
+    public int getClientId() {
+        return clientId;
+    }
+
+    public void sendMessage(String message) {
+        out.println(message);
+    }
+
+    @Override
     public void run() {
-        String readClient;
-
-        // Thread serverInputThread = new Thread(() -> {
-
-        //     if (Server.allClients.isEmpty() && isRun == true) {
-        //         System.out.println("No active clients. Server shutting down...");
-        //         try {
-        //             Server.ss.close();
-        //         } catch (IOException e) {
-        //             e.printStackTrace();
-        //         }
-        //         System.exit(0);
-        //     } else {
-        //         System.out.println("There are still active clients connected. Can't stopserver yet.");
-        //     }
-
-        // });
-        // serverInputThread.start();
-
         try {
-            while (true) {
+            
+            StringBuilder messageBuilder = new StringBuilder();
+            String line;
 
-                readClient = dis.readUTF();
-                System.out.println("Client says at port number " + clientSocket.getPort() + " " + readClient);
-                if (readClient.equalsIgnoreCase("stop")) {
-                    System.out.println("Client disconnetced at port " + clientSocket.getPort());
-                    Server.removeClients(this);
+            while ((line = in.readLine()) != null) {
+                if (line.equalsIgnoreCase("EXIT")) {
                     break;
                 }
-
-                BufferedReader read = new BufferedReader(new InputStreamReader(System.in));
-                String strServer = read.readLine();
-                isRun = true;
-                //System.out.println(isRun);
-
-                
-                dos.writeUTF(strServer);
-             
+                if (line.equals(END_OF_MESSAGE)) {
+                    if (messageBuilder.length() > 0) {
+                        String message = messageBuilder.toString();
+                        System.out.println("Received from Client " + clientId + ":\n" + message);
+                        // // Echo back to the client
+                        out.println("Server: Received message from Client " + clientId + " successfully!!");
+                        messageBuilder.setLength(0); // Clear builder for next message
+                    }
+                } else {
+                    messageBuilder.append(line).append("\n");
+                }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            System.out.println("Error handling Client " + clientId + ": " + e.getMessage());
+        } finally {
+            try {
+                out.close();
+                in.close();
+                socket.close();
+                Server.removeClient(this);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-
     }
+}
+
+class WorkOfServer extends Thread {
+
+    ServerSocket ss;
+    Scanner scanner = null;
+
+    WorkOfServer(ServerSocket ss) {
+        this.ss = ss;
+    }
+
+    @Override
+    public void run() {
+        scanner = new Scanner(System.in);
+        try {
+            while (true) {
+                String input = scanner.nextLine();
+                if (input.equalsIgnoreCase("SHUTDOWN") && Server.clients.isEmpty()) {
+                    System.out.println("Shutting down server...");
+                    try {
+                        ss.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    break; 
+                } else if (input.toUpperCase().startsWith("SEND ")) {
+                    String[] parts = input.split(" ", 3);
+                    if (parts.length < 3) {
+                        System.out.println("Invalid command. Use: SEND <client_id> <message>");
+                        continue;
+                    }
+                    try {
+                        int clientId = Integer.parseInt(parts[1]);
+                        String message = parts[2];
+                        Server.sendMessageToClient(clientId, "Server: " + message);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid client ID. Use: SEND <client_id> <message>");
+                    }
+                } else if (!Server.clients.isEmpty()) {
+                    System.out.println("Cannot shutdown: Clients are still connected.");
+                } else {
+                    System.out.println("Invalid command. Use 'SEND <client_id> <message>' or 'SHUTDOWN'");
+                }
+            }
+        } finally {
+            scanner.close();
+        }
+    }
+    
+
+   
 }
