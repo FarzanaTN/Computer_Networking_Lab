@@ -38,6 +38,7 @@ public class Client {
                 String fileName = keyboard.readLine();
 
                 if (fileName.equalsIgnoreCase("exit")) {
+                    dos.writeBytes("exit" + '\n');
                     System.out.println("Exiting...");
                     break;
                 }

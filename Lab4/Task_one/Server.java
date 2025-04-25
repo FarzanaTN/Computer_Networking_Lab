@@ -79,7 +79,7 @@ class ClientHandler extends Thread {
 
             String fileName;
             while ((fileName = in.readLine()) != null) {
-                fileName = fileName.trim();
+                //fileName = fileName.trim();
                 File file = new File(fileName);
 
             if (fileName.equalsIgnoreCase("exit")) {
