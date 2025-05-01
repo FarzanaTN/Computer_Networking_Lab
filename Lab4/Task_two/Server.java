@@ -53,16 +53,36 @@ public class Server {
         @Override
         public void handle(HttpExchange httpExchange) throws IOException {
 
+            System.out.println("Inside download");
+
             if (!httpExchange.getRequestMethod().equalsIgnoreCase("GET")) {
                 httpExchange.sendResponseHeaders(405, -1); // Method Not Allowed
+                System.out.println("Method not allowed in download part");
                 return;
             }
+
+            outputStream = httpExchange.getResponseBody();
+            // response = "Available Files are : \n";
+            // File dir = new File(".");
+            // File[] files = dir.listFiles();
+
+            // outputStream.write(response.getBytes());
+
+            // response = "";
+            // for (File file : files) {
+            //     if (file.isFile()) {
+            //         response = file.getName();
+            //         outputStream.write(response.getBytes());
+            //     }
+            // }
+            // outputStream.flush();
 
             URI uri = httpExchange.getRequestURI();
             String query = uri.getRawQuery();
 
             if (query == null || !query.startsWith("filename=")) {
                 httpExchange.sendResponseHeaders(400, -1); // Bad Request
+                System.out.println("Invalid requst for download");
                 return;
             }
             // String fileName = query.substring(query.indexOf("=") + 1);
@@ -74,9 +94,8 @@ public class Server {
             if (!file.exists() || file.isDirectory()) {
                 String response = "File Not Found";
                 httpExchange.sendResponseHeaders(404, response.length());
-                OutputStream os = httpExchange.getResponseBody();
-                os.write(response.getBytes());
-                os.close();
+                outputStream.write(response.getBytes());
+                outputStream.close();
                 return;
             }
 
@@ -86,17 +105,16 @@ public class Server {
                     "attachment; filename=\"" + file.getName() + "\"");
 
             httpExchange.sendResponseHeaders(200, file.length());
-            OutputStream os = httpExchange.getResponseBody();
             FileInputStream fis = new FileInputStream(file);
             byte[] buffer = new byte[8192];
             int bytesRead;
 
             while ((bytesRead = fis.read(buffer)) != -1) {
-                os.write(buffer, 0, bytesRead);
+                outputStream.write(buffer, 0, bytesRead);
             }
 
             fis.close();
-            os.close();
+            outputStream.close();
 
             System.out.println("Queried for " + fileName);
         }
@@ -111,8 +129,11 @@ public class Server {
         @Override
         public void handle(HttpExchange httpExchange) throws IOException {
 
+            System.out.println("Inside upload");
+
             if (!httpExchange.getRequestMethod().equalsIgnoreCase("POST")) {
                 httpExchange.sendResponseHeaders(405, -1); // Method Not Allowed
+                System.out.println("Method not allowed in upload part");
                 return;
             }
 
