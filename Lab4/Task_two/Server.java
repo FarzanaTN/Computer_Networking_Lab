@@ -11,152 +11,114 @@ public class Server {
     private static HttpServer httpServer = null;
 
     public static void main(String[] args) {
-
         try {
             Server server = new Server();
             server.runServer();
-
         } catch (Exception e) {
-            // TODO: handle exception
-            System.out.println("Error is");
+            System.err.println("Error starting server: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     private void runServer() throws IOException {
-        // instance of HttpServer
         httpServer = HttpServer.create(new InetSocketAddress(port), 0);
-
-        // create context of download and upload
         HttpContext downloadContext = httpServer.createContext("/download");
         HttpContext uploadContext = httpServer.createContext("/upload");
-
-        // assign handlers
+        //new
+         HttpContext listContext = httpServer.createContext("/list-files");
         downloadContext.setHandler(new DownloadHandler());
         uploadContext.setHandler(new UploadHandler());
+          // new added
+         listContext.setHandler(new ListFilesHandler());
 
-        // thread pool to handle multiple clients
         httpServer.setExecutor(Executors.newFixedThreadPool(10));
-
-        // start the server
         httpServer.start();
         System.out.println("Server started at port number " + port);
     }
 
-    // custom DownloadHandler Class (GET_METHOD)
     public static class DownloadHandler implements HttpHandler {
-
-        // GET METHOD
         OutputStream outputStream;
         String response;
 
         @Override
         public void handle(HttpExchange httpExchange) throws IOException {
-
-            System.out.println("Inside download");
-
             if (!httpExchange.getRequestMethod().equalsIgnoreCase("GET")) {
-                httpExchange.sendResponseHeaders(405, -1); // Method Not Allowed
-                System.out.println("Method not allowed in download part");
+                httpExchange.sendResponseHeaders(405, -1);
                 return;
             }
-
-            outputStream = httpExchange.getResponseBody();
-            // response = "Available Files are : \n";
-            // File dir = new File(".");
-            // File[] files = dir.listFiles();
-
-            // outputStream.write(response.getBytes());
-
-            // response = "";
-            // for (File file : files) {
-            //     if (file.isFile()) {
-            //         response = file.getName();
-            //         outputStream.write(response.getBytes());
-            //     }
-            // }
-            // outputStream.flush();
 
             URI uri = httpExchange.getRequestURI();
             String query = uri.getRawQuery();
 
             if (query == null || !query.startsWith("filename=")) {
-                httpExchange.sendResponseHeaders(400, -1); // Bad Request
-                System.out.println("Invalid requst for download");
+                httpExchange.sendResponseHeaders(400, -1);
                 return;
             }
-            // String fileName = query.substring(query.indexOf("=") + 1);
 
             String fileName = URLDecoder.decode(query.substring("filename=".length()), "UTF-8");
-            File file = new File(fileName);
+            File file = new File("data/" +fileName);
 
-            // check if the file exixts on the server disk
             if (!file.exists() || file.isDirectory()) {
                 String response = "File Not Found";
                 httpExchange.sendResponseHeaders(404, response.length());
-                outputStream.write(response.getBytes());
-                outputStream.close();
+                OutputStream os = httpExchange.getResponseBody();
+                os.write(response.getBytes());
+                os.close();
                 return;
             }
 
-            // Set headers
             httpExchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
             httpExchange.getResponseHeaders().add("Content-Disposition",
                     "attachment; filename=\"" + file.getName() + "\"");
 
             httpExchange.sendResponseHeaders(200, file.length());
+            OutputStream os = httpExchange.getResponseBody();
             FileInputStream fis = new FileInputStream(file);
             byte[] buffer = new byte[8192];
             int bytesRead;
 
             while ((bytesRead = fis.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
+                os.write(buffer, 0, bytesRead);
             }
 
             fis.close();
-            outputStream.close();
+            os.close();
 
             System.out.println("Queried for " + fileName);
         }
     }
 
-    // custom UploadHandler Class
     public static class UploadHandler implements HttpHandler {
-
-        // post request
         String response;
 
         @Override
         public void handle(HttpExchange httpExchange) throws IOException {
-
-            System.out.println("Inside upload");
-
             if (!httpExchange.getRequestMethod().equalsIgnoreCase("POST")) {
-                httpExchange.sendResponseHeaders(405, -1); // Method Not Allowed
-                System.out.println("Method not allowed in upload part");
+                httpExchange.sendResponseHeaders(405, -1);
                 return;
             }
 
-            // Create a new file to save the uploaded data. Name it upload_<timestamp> or
-            // use another naming convention.
-            // Generate file name using timestamp
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             Headers headers = httpExchange.getRequestHeaders();
-
             String fileName = "upload_" + timestamp;
-            // OPTIONAL: Extract filename from a custom header or later parse multipart if
-            // needed
             if (headers.containsKey("X-Filename")) {
-                fileName = headers.getFirst("X-Filename"); // e.g., user sends this custom header
+                fileName = headers.getFirst("X-Filename");
+                System.out.println("Using X-Filename: " + fileName);
             } else {
                 fileName = "upload_" + timestamp + ".txt";
+                System.out.println("Using default filename: " + fileName);
+            }
+
+        
+            if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+                fileName = "upload_" + timestamp + ".txt";
+                System.out.println("Invalid X-Filename, using default: " + fileName);
             }
 
             InputStream inputStream = httpExchange.getRequestBody();
-            File file = new File(fileName);
+            File file = new File("data/"+fileName);
             FileOutputStream fileOutputStream = new FileOutputStream(file);
 
-            // Read data in chunks from the input and write to the file output.
             byte[] buffer = new byte[8192];
             int bytesRead;
             int totalBytes = 0;
@@ -169,18 +131,16 @@ public class Server {
             fileOutputStream.close();
             inputStream.close();
 
-            // After saving: Send HTTP 200 OK.
-            // Respond with a confirmation message including the filename.
+            System.out.println("Received upload, total bytes: " + totalBytes);
+
             String responseMessage;
             int statusCode;
 
             if (totalBytes == 0) {
-                // No file content sent
                 responseMessage = "No file uploaded.";
-                statusCode = 400; // Bad Request
-                file.delete(); // Remove the empty file
+                statusCode = 400;
+                file.delete();
             } else {
-                // File received
                 responseMessage = "File uploaded successfully as: " + fileName;
                 statusCode = 200;
             }
@@ -191,5 +151,34 @@ public class Server {
             responseBody.close();
         }
     }
+       //new
+     public static class ListFilesHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
 
+            File folder = new File("data");
+            File[] listOfFiles = folder.listFiles();
+            StringBuilder fileList = new StringBuilder();
+
+            if (listOfFiles != null) {
+                for (File file : listOfFiles) {
+                    if (file.isFile()) {
+                        fileList.append(file.getName()).append("\n");
+                    }
+                }
+            }
+
+            byte[] response = fileList.toString().getBytes();
+            exchange.sendResponseHeaders(200, response.length);
+            OutputStream os = exchange.getResponseBody();
+            os.write(response);
+            os.close();
+
+            System.out.println("List of files sent to client");
+        }
+    }
 }
