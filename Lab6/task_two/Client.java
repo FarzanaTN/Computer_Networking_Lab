@@ -3,9 +3,9 @@ import java.net.*;
 import java.util.*;
 
 public class Client {
-    private static final String address = "localhost";
+    private static final String address = "10.42.0.196";//localhost
     private static final int port = 5000;
-    private static final int chunk = 500; 
+    private static final int chunk = 1024; 
     private static final double alpha = 0.125;
     private static final double beta = 0.25;
     private static final int windowSize = 4; 

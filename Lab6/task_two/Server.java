@@ -37,7 +37,7 @@ class ClientHandler extends Thread {
 
             int expectedSeq = 1;
             Random rand = new Random();
-            double lossProbability = 0.2; 
+            double lossProbability = 0.1; 
 
             while (true) {
                 try {
