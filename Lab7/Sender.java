@@ -5,9 +5,9 @@ import java.util.*;
 public class Sender {
     public static void main(String[] args) throws Exception {
         String mode = args.length > 0 ? args[0].toUpperCase() : "TAHOE"; // TAHOE or RENO
-        int N = 50; // rounds
+        int N = 10; // rounds
         int cwnd = 1;
-        int ssthresh = 20;
+        int ssthresh = 8;
         int dupACKcount = 0;
         String lastACK = "";
         int pkt_in = 0;
