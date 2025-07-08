@@ -34,11 +34,12 @@ Each sub-project has its own folder. Navigate into the desired folder and run th
 
 ### Example: TCP Server-Client
 
-**Step 1:** Start the server  
+**Step 1:** Start the server
 ```bash
 javac Server.java && java Server
+```
 
-###
-**Step 2:** Start the client  
+**Step 2:** Start the client
 ```bash
 javac Client.java && java Client
+```
