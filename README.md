@@ -38,7 +38,7 @@ Each sub-project has its own folder. Navigate into the desired folder and run th
 ```bash
 javac Server.java && java Server
 
-Step 2: Start the client in another terminal
-
-python3 tcp_client.py
-
+###
+**Step 2:** Start the client  
+```bash
+javac Client.java && java Client
