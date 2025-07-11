@@ -24,12 +24,12 @@ public class Server {
         httpServer = HttpServer.create(new InetSocketAddress(port), 0);
         HttpContext downloadContext = httpServer.createContext("/download");
         HttpContext uploadContext = httpServer.createContext("/upload");
-        //new
-         HttpContext listContext = httpServer.createContext("/list-files");
+        // new
+        HttpContext listContext = httpServer.createContext("/list-files");
         downloadContext.setHandler(new DownloadHandler());
         uploadContext.setHandler(new UploadHandler());
-          // new added
-         listContext.setHandler(new ListFilesHandler());
+        // new added
+        listContext.setHandler(new ListFilesHandler());
 
         httpServer.setExecutor(Executors.newFixedThreadPool(10));
         httpServer.start();
@@ -56,7 +56,7 @@ public class Server {
             }
 
             String fileName = URLDecoder.decode(query.substring("filename=".length()), "UTF-8");
-            File file = new File("data/" +fileName);
+            File file = new File("data/" + fileName);
 
             if (!file.exists() || file.isDirectory()) {
                 String response = "File Not Found";
@@ -109,14 +109,13 @@ public class Server {
                 System.out.println("Using default filename: " + fileName);
             }
 
-        
             if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
                 fileName = "upload_" + timestamp + ".txt";
                 System.out.println("Invalid X-Filename, using default: " + fileName);
             }
 
             InputStream inputStream = httpExchange.getRequestBody();
-            File file = new File("data/"+fileName);
+            File file = new File("data/" + fileName);
             FileOutputStream fileOutputStream = new FileOutputStream(file);
 
             byte[] buffer = new byte[8192];
@@ -151,8 +150,9 @@ public class Server {
             responseBody.close();
         }
     }
-       //new
-     public static class ListFilesHandler implements HttpHandler {
+
+    // new
+    public static class ListFilesHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {

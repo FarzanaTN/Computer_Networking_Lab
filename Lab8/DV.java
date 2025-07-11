@@ -186,7 +186,7 @@ class Router {
     public Map<String, RouteEntry> getRoutingTable() { return new HashMap<>(routingTable); }
 }
 
-public class DistanceVectorRouting {
+public class DV {
     private Map<String, Router> routers;
     private List<String> logs;
     private int messageCount;
@@ -196,7 +196,7 @@ public class DistanceVectorRouting {
     private long startTime;
     private volatile boolean converged;
     
-    public DistanceVectorRouting() {
+    public DV() {
         this.routers = new HashMap<>();
         this.logs = new ArrayList<>();
         this.messageCount = 0;
@@ -442,7 +442,7 @@ public class DistanceVectorRouting {
     
     
     public static void main(String[] args) {
-        DistanceVectorRouting dvr = new DistanceVectorRouting();
+        DV dvr = new DV();
         
         
         String topologyFile = "topology.txt";
